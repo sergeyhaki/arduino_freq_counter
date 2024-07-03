@@ -50,7 +50,7 @@ void setup() {
   ETIMSK = (1 << TOIE3); // TIMER3 Overflow Interrupt Enable
 
 #else
-#error "Unknown chip!"
+#error "Check use controller or  replace __AVR_ATmega168__ to  __AVR_ATmega168PA__ "
 #endif
 
 Serial.begin(9600);
