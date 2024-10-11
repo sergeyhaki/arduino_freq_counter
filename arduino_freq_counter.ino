@@ -4,7 +4,7 @@
   which is then output to the serial monitor.
 
   Key features:
-  - Timer0 is used to count external pulses (Timer3 for AtMega64/128).
+  - Timer0 is used to count external pulses (Timer3 for ATmega64/128).
   - To avoid conflicts with Arduino functions (like delay(), millis()), 
     Compare Match interrupt is used instead of the overflow interrupt, comparing with the maximum value 0xFF.
   - Timer1 is used as an interval timer with a 1-second interval.
