@@ -9,7 +9,6 @@ volatile int32_t count, overfl;  // Глобальные переменные д
 uint8_t countReady = 0;          // Флаг для вывода готовых данных
 
 void setup() {
-
 #if defined(__AVR_ATmega88PA__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__)
   // Настройка TIMER0 для внешнего сигнала на пине T0
 #define TIMER_CNT_ISR TIMER0_COMPA_vect
@@ -20,11 +19,12 @@ void setup() {
   TIMSK0 = (1 << OCIE0A);  // Разрешаем прерывание TIMER0 по совпадению
   OCR0A = 0xff;            // Устанавливаем максимальное значение сравнения
 
-  // Настройка TIMER1 как интервала по заданному значению в миллисекундах
-  TCCR1A = 0;
-  TCCR1B = (1 << WGM12) | 5;  // Режим CTC | Делитель F_CLK/1024
-  OCR1A = OCR1A_VALUE;        // Вычисленное значение для интервала
-  TIMSK1 = (1 << OCIE1A);     // Разрешение прерывания TIMER1 по совпадению
+  // Настройка TIMER1 как интервала с переключением OC1A для генерации импульса
+  DDRB |= (1 << PB1);       // Устанавливаем пин OC1A (PB1 на ATmega328P) как выход
+  TCCR1A = (1 << COM1A0);   // Toggle OC1A on Compare Match
+  TCCR1B = (1 << WGM12) | 5;  // CTC mode | Prescaler F_CLK/1024
+  OCR1A = OCR1A_VALUE;      // Вычисленное значение для интервала
+  TIMSK1 = (1 << OCIE1A);   // Разрешение прерывания TIMER1 по совпадению
 
 #elif defined(__AVR_ATmega16__) || defined(__AVR_ATmega32__)
   // Настройка TIMER0 для внешнего сигнала на пине T0
@@ -35,11 +35,11 @@ void setup() {
   TIMSK = (1 << OCIE0);      // Разрешение прерывания TIMER0 по совпадению
   OCR0 = 0xff;               // Максимальное значение сравнения
 
-  DDRD |= (1 << PD5);  // Настраиваем пин OC1A (PD5) как выход
-  TCCR1A = (1 << COM1A0); // Toggle OC1A
+  DDRD |= (1 << PD5);         // Устанавливаем пин OC1A (PD5 на ATmega16/32) как выход
+  TCCR1A = (1 << COM1A0);     // Toggle OC1A on Compare Match
   TCCR1B = (1 << WGM12) | 5;  // CTC mode | Prescaler F_CLK/1024
-  OCR1A = OCR1A_VALUE;    // Вычисленное значение для интервала
-  TIMSK |= (1 << OCIE1A); // Enable TIMER1 Compare Match interrupt
+  OCR1A = OCR1A_VALUE;        // Вычисленное значение для интервала
+  TIMSK |= (1 << OCIE1A);     // Разрешение прерывания TIMER1 по совпадению
 
 #elif defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__)
   // Настройка TIMER3 для внешнего сигнала на пине T3 (PE6)
@@ -49,7 +49,8 @@ void setup() {
   TCCR3A = 0;
   TCCR3B = 7;  // Нормальный режим | Внешний источник на T3
 
-  TCCR1A = 0;
+  DDRE |= (1 << PE3);         // Устанавливаем пин OC3A (PE3 на ATmega64/128) как выход
+  TCCR1A = (1 << COM1A0);     // Toggle OC1A on Compare Match
   TCCR1B = (1 << WGM12) | 5;  // CTC mode | Prescaler F_CLK/1024
   OCR1A = OCR1A_VALUE;        // Вычисленное значение для интервала
   TIMSK = (1 << OCIE1A);      // Разрешение прерывания TIMER1 по совпадению
@@ -64,7 +65,7 @@ void setup() {
 
 void loop() {
   if (countReady) {                                // Если данные готовы
-    float frequency = (count * 1000.0 / INTERVAL_MS); // Пересчет в герцы с учетом интервала в мс
+    uint32_t frequency = (count * 1000) / INTERVAL_MS;  // Частота без использования float
     Serial.print(frequency);                       // Выводим количество импульсов в герцах
     Serial.println(" Hz");                         // Выводим единицы измерения (Гц)
     countReady = 0;                                // Сбрасываем флаг
