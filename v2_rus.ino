@@ -1,8 +1,9 @@
-#define F_CPU 16000000UL   // Частота тактового генератора, например, 16 МГц
-#define PRESCALER 1024     // Делитель для таймера
-#define INTERVAL_HZ 1      // Частота измерительного интервала (1 Гц, т.е. 1 секунда)
+#define F_CPU 16000000UL     // Частота тактового генератора, например, 16 МГц
+#define PRESCALER 1024       // Делитель для таймера
+#define INTERVAL_MS 1000     // Интервал измерения в миллисекундах (1000 мс = 1 секунда)
 
-#define OCR1A_VALUE ((F_CPU / PRESCALER / INTERVAL_HZ) - 1)  // Вычисление значения для регистра сравнения
+// Вычисление значения для регистра OCR1A в зависимости от F_CPU, PRESCALER и INTERVAL_MS
+#define OCR1A_VALUE ((F_CPU / PRESCALER) * INTERVAL_MS / 1000 - 1)
 
 volatile int32_t count, overfl;  // Глобальные переменные для подсчета импульсов и переполнений
 uint8_t countReady = 0;          // Флаг для вывода готовых данных
@@ -19,10 +20,10 @@ void setup() {
   TIMSK0 = (1 << OCIE0A);  // Разрешаем прерывание TIMER0 по совпадению
   OCR0A = 0xff;            // Устанавливаем максимальное значение сравнения
 
-  // Настройка TIMER1 как интервала в 1 секунду
+  // Настройка TIMER1 как интервала по заданному значению в миллисекундах
   TCCR1A = 0;
   TCCR1B = (1 << WGM12) | 5;  // Режим CTC | Делитель F_CLK/1024
-  OCR1A = OCR1A_VALUE;        // Вычисленное значение для 1-секундного интервала
+  OCR1A = OCR1A_VALUE;        // Вычисленное значение для интервала
   TIMSK1 = (1 << OCIE1A);     // Разрешение прерывания TIMER1 по совпадению
 
 #elif defined(__AVR_ATmega16__) || defined(__AVR_ATmega32__)
@@ -37,7 +38,7 @@ void setup() {
   DDRD |= (1 << PD5);  // Настраиваем пин OC1A (PD5) как выход
   TCCR1A = (1 << COM1A0); // Toggle OC1A
   TCCR1B = (1 << WGM12) | 5;  // CTC mode | Prescaler F_CLK/1024
-  OCR1A = OCR1A_VALUE;    // Вычисленное значение для 1-секундного интервала
+  OCR1A = OCR1A_VALUE;    // Вычисленное значение для интервала
   TIMSK |= (1 << OCIE1A); // Enable TIMER1 Compare Match interrupt
 
 #elif defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__)
@@ -50,7 +51,7 @@ void setup() {
 
   TCCR1A = 0;
   TCCR1B = (1 << WGM12) | 5;  // CTC mode | Prescaler F_CLK/1024
-  OCR1A = OCR1A_VALUE;        // Вычисленное значение для 1-секундного интервала
+  OCR1A = OCR1A_VALUE;        // Вычисленное значение для интервала
   TIMSK = (1 << OCIE1A);      // Разрешение прерывания TIMER1 по совпадению
   ETIMSK = (1 << TOIE3);      // Разрешение прерывания TIMER3 по переполнению
 
@@ -62,17 +63,20 @@ void setup() {
 }
 
 void loop() {
-  if (countReady) {            // Если данные готовы
-    Serial.print(count * 16);  // Выводим количество импульсов
-    Serial.println(" Hz");     // Выводим единицы измерения (Гц)
-    countReady = 0;            // Сбрасываем флаг
+  if (countReady) {                                // Если данные готовы
+    float frequency = (count * 1000.0 / INTERVAL_MS); // Пересчет в герцы с учетом интервала в мс
+    Serial.print(frequency);                       // Выводим количество импульсов в герцах
+    Serial.println(" Hz");                         // Выводим единицы измерения (Гц)
+    countReady = 0;                                // Сбрасываем флаг
   }
 }
 
+// Прерывание для счетчика импульсов (TIMER)
 ISR(TIMER_CNT_ISR) {
   overfl++;  // Увеличиваем счетчик переполнений
 }
 
+// Прерывание для таймера интервала
 ISR(TIMER_INTERVAL_ISR) {
   count = (int32_t)(overfl << 8) + TIMER_CNT;  // Считаем количество импульсов
   TIMER_CNT = 0;                               // Сбрасываем счетчик
