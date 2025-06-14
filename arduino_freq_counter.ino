@@ -13,7 +13,7 @@
   The program supports several AVR microcontrollers (ATmega88PA, ATmega168, ATmega328P, ATmega16, ATmega32, ATmega64, ATmega128).
 */
 
-volatile int32_t count, overfl;  // Global variables for counting pulses and overflows
+volatile uint32_t count, overfl;  // Global variables for counting pulses and overflows
 uint8_t countReady = 0;          // Flag to indicate when data is ready for output
 
 void setup() {
@@ -102,7 +102,7 @@ ISR(TIMER_CNT_ISR) {
 
 // Interrupt service routine for the interval timer
 ISR(TIMER_INTERVAL_ISR) {
-  count = (int32_t)(overfl << 8) + TIMER_CNT;  // Calculate the pulse count
+  count = (static_cast<uint32_t>(overfl) << 8) | TIMER_CNT;   // Calculate the pulse count
   TIMER_CNT = 0;                               // Reset the counter
   overfl = 0;                                  // Reset the overflow counter
   countReady = 1;                              // Set the flag indicating data is ready
