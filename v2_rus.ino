@@ -5,7 +5,7 @@
 // Вычисление значения для регистра OCR1A в зависимости от F_CPU, PRESCALER и INTERVAL_MS
 #define OCR1A_VALUE ((F_CPU / PRESCALER) * INTERVAL_MS / 1000 - 1)
 
-volatile int32_t count, overfl;  // Глобальные переменные для подсчета импульсов и переполнений
+volatile uint32_t count, overfl;  // Глобальные переменные для подсчета импульсов и переполнений
 uint8_t countReady = 0;          // Флаг для вывода готовых данных
 
 void setup() {
@@ -79,7 +79,7 @@ ISR(TIMER_CNT_ISR) {
 
 // Прерывание для таймера интервала
 ISR(TIMER_INTERVAL_ISR) {
-  count = (int32_t)(overfl << 8) + TIMER_CNT;  // Считаем количество импульсов
+  count = (static_cast<uint32_t>(overfl) << 8) | TIMER_CNT;  // Считаем количество импульсов
   TIMER_CNT = 0;                               // Сбрасываем счетчик
   overfl = 0;                                  // Сбрасываем счетчик переполнений
   countReady = 1;                              // Устанавливаем флаг готовности
